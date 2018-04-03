@@ -7,7 +7,9 @@ class alignment {
     public static Score mx[][];
     public static String x, y;
     public static String sol1, sol2;
-    public static int op;
+    public static int op, gorp;
+    public static int max, iMax, jMax;
+    public static String xName, yName;
     private static final int[][] aScore = {
             { 4, -1, -2, -2,  0, -1, -1,  0, -2, -1, -1, -1, -1, -2, -1,  1,  0, -3, -2,  0},
             {-1,  5,  0, -2, -3,  1,  0, -2,  0, -3, -2,  2, -1, -3, -2, -1, -1, -3, -2, -3},
@@ -35,13 +37,12 @@ class alignment {
         System.out.println("Global(1) or Local(2) Alignment? ");
         op = in.nextInt();
         System.out.println("Compare Genes(1) or Proteins(2)? ");
-        int gorp = in.nextInt();
+        gorp = in.nextInt();
 
         System.out.println("Input file name?");
         String filename= in.next();
         filename = "input\\"+filename;
         in = new Scanner(new File(filename));
-        String xName, yName;
         xName=in.nextLine();
         x = in.nextLine();
         yName= in.nextLine();
@@ -49,13 +50,13 @@ class alignment {
         mx = new Score[(x.length()+1)][(y.length()+1)];
 
         if(op==1 && gorp==1){ // genes global alignment
-
+            lineUpGenesGlobal();
         }
         else if(op==1 && gorp==2){ // proteins global alignment
             lineUpProteinsGlobal();
         }
         else if(op==2 && gorp==1){ //genes local alignment
-
+            lineUpGenesLocal();
         }
         else if(op==2 && gorp==2){ //proteins local alignment
             lineUpProteinsLocal();
@@ -64,8 +65,58 @@ class alignment {
             System.out.println("Incorrect Input, Bye...");
             return;
         }
-        //System.out.println(x+"\n"+y);
+    }
 
+    static void printAlignment(){
+        for(int i=0; i<x.length()+1; i++) {
+            for (int j = 0; j < y.length() + 1; j++)
+                System.out.print(mx[i][j].value+" ");
+            System.out.println();
+        }
+        sol1="";
+        sol2="";
+        if(op==1) {
+            System.out.println("Score: " + mx[x.length() - 1][y.length() - 1].value);
+            goBackGlobal(x.length(), y.length());
+        }
+        else{
+            System.out.println("Score: " + max);
+            goBackLocal(iMax, jMax);
+        }
+        System.out.printf("%-55s --> %s\n", xName, sol1);
+        //System.out.println("Sequence 1: " + xName + " --> " + sol1);
+        System.out.printf("%-55s --> %s\n", yName, sol2);
+        //System.out.println("Sequence 2: " + yName + " --> " + sol2);
+        return;
+    }
+
+    static void lineUpGenesGlobal() throws Exception {
+        for(int i=0; i<x.length()+1;i++){ //iniciar 1ª coluna
+            mx[i][0]= new Score(globalGap*i, 1);
+        }
+        for(int j=0; j<y.length()+1;j++){ //iniciar 1ª linha
+            mx[0][j]= new Score(globalGap*j, -1);
+        }
+        mx[0][0].path=0;
+        int d, up, left;
+        for(int i=1; i<x.length()+1; i++){
+            for(int j=1; j<y.length()+1; j++){
+                d=diagonalCostGlobal(i, j);
+                up=upCostGlobal(i,j);
+                left=leftCostGlobal(i,j);
+                if(d>=up && d>=left){ //diagonal
+                    mx[i][j]=new Score(d, 0);
+                }
+                else if(up>=d && up>=left){ //cima
+                    mx[i][j]=new Score(up, 1);
+                }
+                else{ //esquerda
+                    mx[i][j]=new Score(left, -1);
+                }
+            }
+        }
+        printAlignment();
+        return;
     }
 
     static void lineUpProteinsGlobal() throws Exception {
@@ -93,29 +144,11 @@ class alignment {
                 }
             }
         }
-
-        for(int i=0; i<x.length()+1; i++) {
-            for (int j = 0; j < y.length() + 1; j++)
-                System.out.print(mx[i][j].value+" ");
-            System.out.println();
-        }
-
-        //percorrer path e imprimir alinhamento
-
-        sol1="";
-        sol2="";
-        //sol1+=x.charAt(x.length()-1);
-        //sol2+=y.charAt(y.length()-1);
-        System.out.println(mx[x.length()-1][y.length()-1].value);
-        goBackGlobal(x.length(), y.length());
-        System.out.println(sol1);
-        System.out.println(sol2);
-
-
+        printAlignment();
         return;
     }
 
-    static void lineUpProteinsLocal() throws Exception {
+    static void lineUpGenesLocal() throws Exception {
         for(int i=0; i<x.length()+1;i++){ //iniciar 1ª coluna
             mx[i][0]= new Score(0, 1);
         }
@@ -124,7 +157,6 @@ class alignment {
         }
         mx[0][0].path=0;
         int d, up, left;
-        int max, iMax, jMax;
         max=0;
         iMax=0;
         jMax=0;
@@ -168,30 +200,85 @@ class alignment {
                 }
             }
         }
-        for(int i=0; i<x.length()+1; i++) {
-            for (int j = 0; j < y.length() + 1; j++)
-                System.out.print(mx[i][j].value+" ");
-            System.out.println();
+        printAlignment();
+        return;
+    }
+
+    static void lineUpProteinsLocal() throws Exception {
+        for(int i=0; i<x.length()+1;i++){ //iniciar 1ª coluna
+            mx[i][0]= new Score(0, 1);
         }
-        System.out.println(max);
-        sol1="";
-        sol2="";
-        goBackLocal(iMax, jMax);
-
-        System.out.println(sol1);
-        System.out.println(sol2);
-
+        for(int j=0; j<y.length()+1;j++){ //iniciar 1ª linha
+            mx[0][j]= new Score(0, -1);
+        }
+        mx[0][0].path=0;
+        int d, up, left;
+        max=0;
+        iMax=0;
+        jMax=0;
+        for(int i=1; i<x.length()+1; i++){
+            for(int j=1; j<y.length()+1; j++){
+                d=diagonalCostLocal(i, j);
+                up=upCostLocal(i,j);
+                left=leftCostLocal(i,j);
+                if(d>=up && d>=left){ //diagonal
+                    if(d<0)
+                        mx[i][j]=new Score(0, 0);
+                    else
+                        mx[i][j]=new Score(d, 0);
+                    if(d>max) {
+                        max = d;
+                        iMax = i;
+                        jMax = j;
+                    }
+                }
+                else if(up>=d && up>=left){ //cima
+                    if(up<0)
+                        mx[i][j]=new Score(0, 1);
+                    else
+                        mx[i][j]=new Score(up, 1);
+                    if(up>max) {
+                        max = up;
+                        iMax = i;
+                        jMax = j;
+                    }
+                }
+                else{ //esquerda
+                    if(left<0)
+                        mx[i][j]=new Score(0, -1);
+                    else
+                        mx[i][j]=new Score(left, -1);
+                    if(left>max) {
+                        max = left;
+                        iMax = i;
+                        jMax = j;
+                    }
+                }
+            }
+        }
+        printAlignment();
+        return;
     }
 
     static int diagonalCostLocal(int i, int j) throws Exception {
-        return (mx[i-1][j-1].value + getPairScore(i,j));
+        if(gorp==2)
+            return (mx[i-1][j-1].value + getPairScore(i,j));
+        else
+            return (mx[i-1][j-1].value + getGeneScore(i,j));
     }
 
     static int upCostLocal(int i, int j) throws Exception {
-        return (mx[i-1][j].value + localGap);
+        if(gorp==2)
+            return (mx[i-1][j].value + localGap);
+        else
+            return (mx[i-1][j].value - 2);
     }
+
     static int leftCostLocal(int i, int j) throws Exception {
-        return (mx[i][j-1].value + localGap);
+        if(gorp==2)
+            return (mx[i][j-1].value + localGap);
+        else
+            return (mx[i][j-1].value - 2);
     }
 
     static int getScoreIndex(char a) throws Exception {
@@ -216,20 +303,36 @@ class alignment {
             case 'W': return 17;
             case 'Y': return 18;
             case 'V': return 19;
-            default: throw new Exception();
+            default: throw new Exception("amino acid '"+a+"' doesn't exist!");
         }
     }
 
     static int diagonalCostGlobal(int i, int j) throws Exception {
-        return (mx[i-1][j-1].value + getPairScore(i,j));
+        if(gorp==2)
+            return (mx[i-1][j-1].value + getPairScore(i,j));
+        else
+            return (mx[i-1][j-1].value + getGeneScore(i,j));
     }
 
     static int leftCostGlobal(int i, int j){
-        return (mx[i][j-1].value + globalGap);
+        if(gorp==2)
+            return (mx[i][j-1].value + globalGap);
+        else
+            return (mx[i][j-1].value - 2);
     }
 
     static int upCostGlobal(int i, int j){
-        return (mx[i-1][j].value + globalGap);
+        if(gorp==2)
+            return (mx[i-1][j].value + globalGap);
+        else
+            return (mx[i-1][j].value - 2);
+    }
+
+    static int getGeneScore(int i, int j){
+        if(x.charAt(i-1)==y.charAt(j-1))
+            return 1;
+        else
+            return -1;
     }
 
     static int getPairScore(int i, int j) throws Exception {
