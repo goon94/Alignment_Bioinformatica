@@ -1,5 +1,9 @@
 import java.io.*;
+import java.net.ProtocolException;
 import java.util.*;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 class alignment {
     public static int globalGap = -2;
@@ -64,6 +68,55 @@ class alignment {
         else{
             System.out.println("Incorrect Input, Bye...");
             return;
+        }
+        in = new Scanner(System.in);
+        System.out.println("EBI Request - Do you wanna see the result for the same sequences from EBI website?");
+        System.out.println("y or n ?");
+        char r = in.nextLine().charAt(0);
+        if(r=='y') {
+            askEBI();
+        }
+        else
+            System.out.println("Bye...");
+    }
+
+    static void askEBI(){
+        //System.out.println("wait4result");
+        try {
+            URL url = new URL("https://www.ebi.ac.uk/Tools/services/rest/emboss_needle/run");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setDoOutput(true);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //conn.setRequestProperty("Content-Type", "application/json");
+            //String input = "{\"aseq\":\"" + x + "\", \"bseq\":\"" + y + "\", \"matrix\": \"BLOSUM62\", \"gapopen\": 1, \"gapext\": 5.0, \"format\": \"pair\"}";
+            String input = "aseq="+x+"&bseq="+y+"&matrix=BLOSUM62&gapopen=1&gapext=5";
+            OutputStream os = conn.getOutputStream();
+            os.write(input.getBytes());
+            os.flush();
+
+            if (conn.getResponseCode() != HttpURLConnection.HTTP_CREATED) {
+                throw new RuntimeException("Failed : HTTP error code : "
+                        + conn.getResponseCode() +" "+ conn.getErrorStream());
+            }
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    (conn.getInputStream())));
+
+            String output;
+            System.out.println("Output from Server .... \n");
+            while ((output = br.readLine()) != null) {
+                System.out.println(output);
+            }
+
+            conn.disconnect();
+
+        }catch (MalformedURLException e){
+
+        } catch (ProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
