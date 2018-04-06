@@ -42,7 +42,6 @@ class alignment {
         op = in.nextInt();
         System.out.println("Compare Genes(1) or Proteins(2)? ");
         gorp = in.nextInt();
-
         System.out.println("Input file name?");
         String filename= in.next();
         filename = "input\\"+filename;
@@ -81,34 +80,76 @@ class alignment {
     }
 
     static void askEBI(){
-        //System.out.println("wait4result");
         try {
-            URL url = new URL("https://www.ebi.ac.uk/Tools/services/rest/emboss_needle/run");
+
+            // SEND REQUEST
+
+            URL url;
+            if(op==1)
+                url = new URL("https://www.ebi.ac.uk/Tools/services/rest/emboss_needle/run");
+            else
+                url = new URL("https://www.ebi.ac.uk/Tools/services/rest/emboss_water/run");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setDoOutput(true);
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //conn.setRequestProperty("Content-Type", "application/json");
-            //String input = "{\"aseq\":\"" + x + "\", \"bseq\":\"" + y + "\", \"matrix\": \"BLOSUM62\", \"gapopen\": 1, \"gapext\": 5.0, \"format\": \"pair\"}";
-            String input = "aseq="+x+"&bseq="+y+"&matrix=BLOSUM62&gapopen=1&gapext=5";
+            String stype;
+            if(gorp==1)
+                stype="dna";
+            else
+                stype="protein";
+            String input = "email=up201402990@fc.up.pt&stype="+stype+"&asequence=" + x + "&bsequence=" + y + "&gapopen=1&gapext=5.0&format=pair";
             OutputStream os = conn.getOutputStream();
             os.write(input.getBytes());
             os.flush();
-
-            if (conn.getResponseCode() != HttpURLConnection.HTTP_CREATED) {
+            if (conn.getResponseCode() != 200) {
                 throw new RuntimeException("Failed : HTTP error code : "
                         + conn.getResponseCode() +" "+ conn.getErrorStream());
             }
+            BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
+            String jobID;
+            jobID = br.readLine();
+            System.out.println("JobID: " + jobID);
 
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    (conn.getInputStream())));
+            //ASK FOR STATUS
 
-            String output;
-            System.out.println("Output from Server .... \n");
-            while ((output = br.readLine()) != null) {
-                System.out.println(output);
+            String status = "RUNNING";
+            while(status.equals("RUNNING")){
+                if(op==1)
+                    url = new URL("https://www.ebi.ac.uk/Tools/services/rest/emboss_needle/status/" + jobID);
+                else
+                    url = new URL("https://www.ebi.ac.uk/Tools/services/rest/emboss_water/status/" + jobID);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setDoOutput(true);
+                conn.setRequestMethod("GET");
+                if (conn.getResponseCode() != 200) {
+                    throw new RuntimeException("Failed : HTTP error code : "
+                            + conn.getResponseCode() + " " + conn.getErrorStream());
+                }
+                br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
+                status = br.readLine();
             }
+            if(!status.equals("FINISHED"))
+                System.out.println("Some error occurred! Status: "+status);
 
+            //ASK FOR THE RESULT
+
+            if(op==1)
+                url = new URL("https://www.ebi.ac.uk/Tools/services/rest/emboss_needle/result/" + jobID +"/out");
+            else
+                url = new URL("https://www.ebi.ac.uk/Tools/services/rest/emboss_water/result/" + jobID +"/out");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setDoOutput(true);
+            conn.setRequestMethod("GET");
+            if (conn.getResponseCode() != 200) {
+                throw new RuntimeException("Failed : HTTP error code : "
+                        + conn.getResponseCode() + " " + conn.getErrorStream());
+            }
+            String outLine;
+            br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
+            while((outLine=br.readLine())!=null){
+                System.out.println(outLine);
+            }
             conn.disconnect();
 
         }catch (MalformedURLException e){
@@ -118,14 +159,18 @@ class alignment {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+
+
+
     }
 
     static void printAlignment(){
-        for(int i=0; i<x.length()+1; i++) {
+        /*for(int i=0; i<x.length()+1; i++) {
             for (int j = 0; j < y.length() + 1; j++)
                 System.out.print(mx[i][j].value+" ");
             System.out.println();
-        }
+        }*/
         sol1="";
         sol2="";
         if(op==1) {
